@@ -53,6 +53,16 @@ impl Board {
         }
     }
 
+    pub fn unhide_note(&mut self, id: u64) -> Result<(), String> {
+        match self.notes.iter_mut().find(|n| n.id == id) {
+            Some(note) => {
+                note.hidden = false;
+                Ok(())
+            }
+            None => Err(format!("没有找到 id 为 {} 的便利贴", id)),
+        }
+    }
+
     pub fn notes(&self) -> &[Note] {
         &self.notes
     }
