@@ -1,0 +1,20 @@
+name: Build Release
+
+on:
+  push:
+    tags:
+      - "v*" # 推送 v1.0.0 这样的 tag 时触发
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build release
+        run: cargo build --release
+
+      - name: Upload to release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: target/release/SimpleNote.exe
