@@ -8,7 +8,7 @@ pub struct Note {
 
 impl Note {
     pub fn new(id: u64, title: String, content: String) -> Self {
-        Note {
+        Self {
             id,
             title,
             content,

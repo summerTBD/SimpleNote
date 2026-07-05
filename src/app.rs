@@ -2,7 +2,7 @@ use crate::Board;
 
 /// 便利贴应用：SimpleNoteApp
 /// 使用 serde 在关闭窗口时自动保存状态，下次打开恢复。
-#[derive(serde::Deserialize, serde::Serialize)]
+#[derive(Default, serde::Deserialize, serde::Serialize)]
 #[serde(default)]
 pub struct SimpleNoteApp {
     /// 持久数据：所有便签
@@ -19,18 +19,6 @@ pub struct SimpleNoteApp {
     edit_content: String, // 编辑框的内容
 }
 
-impl Default for SimpleNoteApp {
-    fn default() -> Self {
-        Self {
-            board: Board::new(),
-            selected_id: None,
-            show_hidden: false,
-            edit_title: String::new(),
-            edit_content: String::new(),
-        }
-    }
-}
-
 impl SimpleNoteApp {
     /// 应用启动时调用一次，用于加载上次保存的状态。
     pub fn new(cc: &eframe::CreationContext<'_>) -> Self {
@@ -38,6 +26,7 @@ impl SimpleNoteApp {
         let mut fonts = egui::FontDefinitions::default();
 
         // 将微软雅黑字体嵌入到程序中
+        #[expect(clippy::large_include_file)]
         fonts.font_data.insert(
             "cjk".to_owned(),
             std::sync::Arc::new(egui::FontData::from_static(include_bytes!(
@@ -49,14 +38,14 @@ impl SimpleNoteApp {
         fonts
             .families
             .get_mut(&egui::FontFamily::Proportional)
-            .unwrap()
+            .expect("Proportional font family should exist")
             .insert(0, "cjk".to_owned());
 
         // 等宽字体也加上，方便以后显示代码
         fonts
             .families
             .get_mut(&egui::FontFamily::Monospace)
-            .unwrap()
+            .expect("Monospace font family should exist")
             .push("cjk".to_owned());
 
         // 应用字体设置
@@ -74,15 +63,16 @@ impl eframe::App for SimpleNoteApp {
     /// 窗口关闭时自动调用，保存当前状态。
     fn save(&mut self, storage: &mut dyn eframe::Storage) {
         if let Some(id) = self.selected_id {
-            let _ = self
-                .board
-                .edit_note(id, self.edit_title.clone(), self.edit_content.clone());
+            self.board
+                .edit_note(id, self.edit_title.clone(), self.edit_content.clone())
+                .ok();
         }
 
         eframe::set_value(storage, eframe::APP_KEY, self);
     }
 
     /// 每帧调用一次，在这里构建你的 UI。
+    #[expect(clippy::too_many_lines)]
     fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
         // ===== 顶部菜单栏 =====
         egui::Panel::top("top_panel").show_inside(ui, |ui| {
@@ -105,52 +95,48 @@ impl eframe::App for SimpleNoteApp {
                 if ui.button("➕ 新建").clicked() {
                     let new_note = self
                         .board
-                        .add_note("新标签".to_string(), "新标签内容".to_string());
+                        .add_note("新标签".to_owned(), "新标签内容".to_owned());
                     self.selected_id = Some(new_note.id);
                     self.edit_title = new_note.title.clone();
                     self.edit_content = new_note.content.clone();
                 }
 
-                if ui.button("❌ 删除").clicked() {
-                    if let Some(id) = self.selected_id {
-                        if let Err(err) = self.board.delete_note(id) {
-                            log::error!("删除便签失败: {}", err);
-                        } else {
-                            self.selected_id = None;
-                        }
+                if ui.button("❌ 删除").clicked()
+                    && let Some(id) = self.selected_id
+                {
+                    if let Err(err) = self.board.delete_note(id) {
+                        log::error!("删除便签失败: {err}");
+                    } else {
+                        self.selected_id = None;
                     }
                 }
 
-                if ui.button("➖ 隐藏").clicked() {
-                    if let Some(id) = self.selected_id {
-                        let _ = self.board.edit_note(
-                            id,
-                            self.edit_title.clone(),
-                            self.edit_content.clone(),
-                        );
+                if ui.button("➖ 隐藏").clicked()
+                    && let Some(id) = self.selected_id
+                {
+                    self.board
+                        .edit_note(id, self.edit_title.clone(), self.edit_content.clone())
+                        .ok();
 
-                        if let Err(err) = self.board.hide_note(id) {
-                            log::error!("隐藏便签失败: {}", err);
-                        } else {
-                            self.show_hidden = false;
-                            self.selected_id = None;
-                        }
+                    if let Err(err) = self.board.hide_note(id) {
+                        log::error!("隐藏便签失败: {err}");
+                    } else {
+                        self.show_hidden = false;
+                        self.selected_id = None;
                     }
                 }
 
-                if ui.button("🔓 取消隐藏").clicked() {
-                    if let Some(id) = self.selected_id {
-                        let _ = self.board.edit_note(
-                            id,
-                            self.edit_title.clone(),
-                            self.edit_content.clone(),
-                        );
+                if ui.button("🔓 取消隐藏").clicked()
+                    && let Some(id) = self.selected_id
+                {
+                    self.board
+                        .edit_note(id, self.edit_title.clone(), self.edit_content.clone())
+                        .ok();
 
-                        if let Err(err) = self.board.unhide_note(id) {
-                            log::error!("取消隐藏便签失败: {}", err);
-                        } else {
-                            self.selected_id = None;
-                        }
+                    if let Err(err) = self.board.unhide_note(id) {
+                        log::error!("取消隐藏便签失败: {err}");
+                    } else {
+                        self.selected_id = None;
                     }
                 }
 
@@ -209,11 +195,13 @@ impl eframe::App for SimpleNoteApp {
                             {
                                 // 1️⃣ 先保存旧便签的编辑内容
                                 if let Some(old_id) = self.selected_id {
-                                    let _ = self.board.edit_note(
-                                        old_id,
-                                        self.edit_title.clone(),
-                                        self.edit_content.clone(),
-                                    );
+                                    self.board
+                                        .edit_note(
+                                            old_id,
+                                            self.edit_title.clone(),
+                                            self.edit_content.clone(),
+                                        )
+                                        .ok();
                                 }
 
                                 // 2️⃣ 切换选中状态
