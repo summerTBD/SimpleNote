@@ -30,7 +30,7 @@ impl SimpleNoteApp {
         fonts.font_data.insert(
             "cjk".to_owned(),
             std::sync::Arc::new(egui::FontData::from_static(include_bytes!(
-                "../assets/msyh.ttc"
+                "../assets/LXGWWenKai-Regular.ttf"
             ))),
         );
 
