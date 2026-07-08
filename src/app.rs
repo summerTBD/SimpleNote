@@ -1,6 +1,6 @@
 use crate::Board;
 
-/// 窗口最小尺寸（与 main.rs 中 with_min_inner_size 保持一致）
+/// 窗口最小尺寸（与 `main.rs` 中 `with_min_inner_size` 保持一致）
 const MIN_WINDOW_SIZE: egui::Vec2 = egui::Vec2::new(350.0, 260.0);
 
 /// 便利贴应用：SimpleNoteApp
@@ -85,15 +85,13 @@ impl eframe::App for SimpleNoteApp {
             let window_size = ui
                 .ctx()
                 .input(|i| i.viewport().inner_rect.map(|r| r.size()));
-            if let Some(size) = window_size {
-                if size.x < MIN_WINDOW_SIZE.x || size.y < MIN_WINDOW_SIZE.y {
-                    let target = egui::Vec2::new(
-                        size.x.max(MIN_WINDOW_SIZE.x),
-                        size.y.max(MIN_WINDOW_SIZE.y),
-                    );
-                    ui.ctx()
-                        .send_viewport_cmd(egui::ViewportCommand::InnerSize(target));
-                }
+            if let Some(size) = window_size
+                && (size.x < MIN_WINDOW_SIZE.x || size.y < MIN_WINDOW_SIZE.y)
+            {
+                let target =
+                    egui::Vec2::new(size.x.max(MIN_WINDOW_SIZE.x), size.y.max(MIN_WINDOW_SIZE.y));
+                ui.ctx()
+                    .send_viewport_cmd(egui::ViewportCommand::InnerSize(target));
             }
         }
 

@@ -1,8 +1,8 @@
-use std::io::Write;
+use std::io::Write as _;
 
 fn main() {
     // 仅 Windows 平台嵌入图标
-    let target_os = std::env::var("CARGO_CFG_TARGET_OS").unwrap();
+    let target_os = std::env::var("CARGO_CFG_TARGET_OS").expect("Cargo 应设置 CARGO_CFG_TARGET_OS");
     if target_os != "windows" {
         return;
     }
@@ -11,7 +11,7 @@ fn main() {
     let png_bytes = include_bytes!("assets/icon-512.png");
     let img = image::load_from_memory(png_bytes).expect("无法加载图标 PNG");
 
-    let out_dir = std::env::var("OUT_DIR").unwrap();
+    let out_dir = std::env::var("OUT_DIR").expect("Cargo 应设置 OUT_DIR");
     let ico_path = format!("{out_dir}/icon.ico");
 
     // 生成含多个分辨率的 ICO（16/32/48/256 是 Windows 标准尺寸）
@@ -27,7 +27,7 @@ fn main() {
             .append(true)
             .create(true)
             .open(format!("{out_dir}/build_warning.txt"))
-            .unwrap();
+            .expect("无法创建构建警告日志");
         writeln!(f, "winres 编译失败（可忽略）: {e}").ok();
         println!("cargo:warning=无法嵌入 exe 图标（可能缺少 windres）: {e}");
     }
