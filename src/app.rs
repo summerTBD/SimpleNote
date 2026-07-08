@@ -1,5 +1,8 @@
 use crate::Board;
 
+/// 窗口最小尺寸（与 main.rs 中 with_min_inner_size 保持一致）
+const MIN_WINDOW_SIZE: egui::Vec2 = egui::Vec2::new(350.0, 260.0);
+
 /// 便利贴应用：SimpleNoteApp
 /// 使用 serde 在关闭窗口时自动保存状态，下次打开恢复。
 #[derive(Default, serde::Deserialize, serde::Serialize)]
@@ -17,6 +20,8 @@ pub struct SimpleNoteApp {
     edit_title: String, // 编辑框的标题
     #[serde(skip)]
     edit_content: String, // 编辑框的内容
+    #[serde(skip)]
+    first_frame: bool, // 首帧标记：用于窗口尺寸校验
 }
 
 impl SimpleNoteApp {
@@ -74,14 +79,40 @@ impl eframe::App for SimpleNoteApp {
     /// 每帧调用一次，在这里构建你的 UI。
     #[expect(clippy::too_many_lines)]
     fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
+        // ===== 首帧：校验窗口尺寸，防止因历史残留导致窗口过小 =====
+        if self.first_frame {
+            self.first_frame = false;
+            let window_size = ui
+                .ctx()
+                .input(|i| i.viewport().inner_rect.map(|r| r.size()));
+            if let Some(size) = window_size {
+                if size.x < MIN_WINDOW_SIZE.x || size.y < MIN_WINDOW_SIZE.y {
+                    let target = egui::Vec2::new(
+                        size.x.max(MIN_WINDOW_SIZE.x),
+                        size.y.max(MIN_WINDOW_SIZE.y),
+                    );
+                    ui.ctx()
+                        .send_viewport_cmd(egui::ViewportCommand::InnerSize(target));
+                }
+            }
+        }
+
         // ===== 顶部菜单栏 =====
         egui::Panel::top("top_panel").show_inside(ui, |ui| {
             egui::MenuBar::new().ui(ui, |ui| {
                 let is_web = cfg!(target_arch = "wasm32");
                 if !is_web {
                     ui.menu_button("文件", |ui| {
+                        if ui.button("恢复默认窗口").clicked() {
+                            ui.ctx().send_viewport_cmd(egui::ViewportCommand::InnerSize(
+                                egui::Vec2::new(700.0, 500.0),
+                            ));
+                            ui.close();
+                        }
+                        ui.separator();
+
                         if ui.button("退出").clicked() {
-                            ui.send_viewport_cmd(egui::ViewportCommand::Close);
+                            ui.ctx().send_viewport_cmd(egui::ViewportCommand::Close);
                         }
                     });
                 }
