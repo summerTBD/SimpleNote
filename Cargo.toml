@@ -27,7 +27,13 @@ serde = { version = "1.0.219", features = ["derive"] }
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 env_logger = "0.11.8"
 
+[target.'cfg(not(target_arch = "wasm32"))'.build-dependencies]
+winres = "0.1"
+
 # web:
+[build-dependencies]
+image = { version = "0.25", default-features = false, features = ["png", "ico"] }
+
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 wasm-bindgen-futures = "0.4.50"
 web-sys = "0.3.70"              # to access the DOM (to hide the loading text)
