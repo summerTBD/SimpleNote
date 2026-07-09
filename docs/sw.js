@@ -1,4 +1,4 @@
-var cacheName = 'egui-template-pwa';
+var cacheName = 'simplenote-v1';
 var filesToCache = [
   './',
   './index.html',
@@ -8,6 +8,7 @@ var filesToCache = [
 
 /* Start the service worker and cache all of the app's content */
 self.addEventListener('install', function (e) {
+  self.skipWaiting();
   e.waitUntil(
     caches.open(cacheName).then(function (cache) {
       return cache.addAll(filesToCache);
@@ -15,11 +16,30 @@ self.addEventListener('install', function (e) {
   );
 });
 
-/* Serve cached content when offline */
+/* Clear old caches */
+self.addEventListener('activate', function (e) {
+  e.waitUntil(
+    caches.keys().then(function (names) {
+      return Promise.all(
+        names.filter(function (name) { return name !== cacheName; })
+          .map(function (name) { return caches.delete(name); })
+      );
+    })
+  );
+});
+
+/* Network first, fallback to cache */
 self.addEventListener('fetch', function (e) {
   e.respondWith(
-    caches.match(e.request).then(function (response) {
-      return response || fetch(e.request);
-    })
+    fetch(e.request)
+      .then(function (response) {
+        return caches.open(cacheName).then(function (cache) {
+          cache.put(e.request, response.clone());
+          return response;
+        });
+      })
+      .catch(function () {
+        return caches.match(e.request);
+      })
   );
 });
