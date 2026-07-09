@@ -30,7 +30,7 @@ impl SimpleNoteApp {
         // ===== 加载中文字体（解决中文显示为 □ 的问题）=====
         let mut fonts = egui::FontDefinitions::default();
 
-        // 将微软雅黑字体嵌入到程序中
+        // 将霞鹜文楷字体嵌入到程序中（开源字体，SIL Open Font License）
         #[expect(clippy::large_include_file)]
         fonts.font_data.insert(
             "cjk".to_owned(),
