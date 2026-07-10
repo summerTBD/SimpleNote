@@ -18,6 +18,7 @@
     <link data-trunk rel="icon" href="assets/favicon.ico">
 
 
+    <link data-trunk rel="copy-file" href="assets/sw.js" />
     <link data-trunk rel="copy-file" href="assets/manifest.json" />
     <link data-trunk rel="copy-file" href="assets/favicon-192x192.png" data-target-path="assets" />
     <link data-trunk rel="copy-file" href="assets/favicon-512x512.png" data-target-path="assets" />
@@ -131,7 +132,11 @@
         <div class="lds-dual-ring"></div>
     </div>
 
-
+    <script>
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('/SimpleNote/sw.js').catch(() => { });
+        }
+    </script>
 </body>
 
 </html>

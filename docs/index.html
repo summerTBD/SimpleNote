@@ -33,6 +33,7 @@ dispatchEvent(new CustomEvent("TrunkApplicationStarted", {detail: {wasm}}));
     
     
     
+    
 
 
     <link rel="manifest" href="manifest.json">
@@ -142,7 +143,11 @@ dispatchEvent(new CustomEvent("TrunkApplicationStarted", {detail: {wasm}}));
         <div class="lds-dual-ring"></div>
     </div>
 
-
+    <script>
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('/SimpleNote/sw.js').catch(() => {});
+        }
+    </script>
 </body>
 
 </html>
