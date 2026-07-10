@@ -65,7 +65,7 @@ impl SimpleNoteApp {
     }
 
     /// 把键盘输入翻译成 Action
-    fn detect_action(&self, ui: &egui::Ui) -> Option<Action> {
+    fn detect_action(ui: &egui::Ui) -> Option<Action> {
         let typing = ui.ctx().egui_wants_keyboard_input();
 
         ui.input(|i| {
@@ -102,7 +102,7 @@ impl SimpleNoteApp {
     }
 
     /// 执行 Action（按钮和快捷键的统一入口）
-    fn handle_action(&mut self, action: Action) {
+    fn handle_action(&mut self, action: &Action) {
         // 大多数操作前先保存当前编辑内容到 board
         let needs_save = !matches!(action, Action::AddNote | Action::EditNote);
         if needs_save {
@@ -117,10 +117,10 @@ impl SimpleNoteApp {
                 self.edit_content = note.content.clone();
             }
             Action::DeleteNote => {
-                if let Some(id) = self.selected_id {
-                    if self.board.delete_note(id).is_ok() {
-                        self.selected_id = None;
-                    }
+                if let Some(id) = self.selected_id
+                    && self.board.delete_note(id).is_ok()
+                {
+                    self.selected_id = None;
                 }
             }
             Action::ToggleHideNote => {
@@ -160,11 +160,11 @@ impl SimpleNoteApp {
 
     /// 把选中便签的标题和内容加载到编辑框
     fn load_selected(&mut self) {
-        if let Some(id) = self.selected_id {
-            if let Some(note) = self.board.notes().iter().find(|n| n.id == id) {
-                self.edit_title = note.title.clone();
-                self.edit_content = note.content.clone();
-            }
+        if let Some(id) = self.selected_id
+            && let Some(note) = self.board.notes().iter().find(|n| n.id == id)
+        {
+            self.edit_title = note.title.clone();
+            self.edit_content = note.content.clone();
         }
     }
 }
@@ -201,9 +201,9 @@ impl eframe::App for SimpleNoteApp {
         }
 
         // ===== 快捷键处理 =====
-        let action = self.detect_action(ui);
+        let action = Self::detect_action(ui);
         if let Some(action) = action {
-            self.handle_action(action);
+            self.handle_action(&action);
         }
 
         // ===== 顶部菜单栏 =====
@@ -233,19 +233,19 @@ impl eframe::App for SimpleNoteApp {
         egui::Panel::top("toolbar").show_inside(ui, |ui| {
             ui.horizontal(|ui| {
                 if ui.button("➕ 新建").clicked() {
-                    self.handle_action(Action::AddNote);
+                    self.handle_action(&Action::AddNote);
                 }
 
                 if ui.button("❌ 删除").clicked() {
-                    self.handle_action(Action::DeleteNote);
+                    self.handle_action(&Action::DeleteNote);
                 }
 
                 if ui.button("➖ 隐藏").clicked() {
-                    self.handle_action(Action::ToggleHideNote);
+                    self.handle_action(&Action::ToggleHideNote);
                 }
 
                 if ui.button("🔓 取消隐藏").clicked() {
-                    self.handle_action(Action::ToggleHideNote);
+                    self.handle_action(&Action::ToggleHideNote);
                 }
 
                 ui.separator();
