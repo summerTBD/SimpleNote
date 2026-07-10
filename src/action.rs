@@ -1,6 +1,9 @@
 pub enum Action {
-    AddNote,
-    DeleteNote,
+    AddNote,    // ctrl + N
+    DeleteNote, // ctrl + D
     EditNote,
-    ToggleHideNote,
+    ToggleHideNote,   // ctrl + H
+    ToggleShowHidden, // Ctrl+Shift+H
+    SelectNext,       // ↓ / Ctrl+J
+    SelectPrev,       // ↑ / Ctrl+K
 }

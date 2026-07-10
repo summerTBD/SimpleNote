@@ -1,4 +1,5 @@
 use crate::Board;
+use crate::action::Action;
 
 /// 窗口最小尺寸（与 `main.rs` 中 `with_min_inner_size` 保持一致）
 const MIN_WINDOW_SIZE: egui::Vec2 = egui::Vec2::new(350.0, 260.0);
@@ -62,6 +63,110 @@ impl SimpleNoteApp {
             Default::default()
         }
     }
+
+    /// 把键盘输入翻译成 Action
+    fn detect_action(&self, ui: &egui::Ui) -> Option<Action> {
+        let typing = ui.ctx().egui_wants_keyboard_input();
+
+        ui.input(|i| {
+            let ctrl = i.modifiers.ctrl;
+            let shift = i.modifiers.shift;
+
+            // 带修饰键的：不冲突，不用检查 typing
+            if i.key_pressed(egui::Key::N) && ctrl {
+                return Some(Action::AddNote);
+            }
+            if i.key_pressed(egui::Key::D) && ctrl {
+                return Some(Action::DeleteNote);
+            }
+            // 范围小的先判断：Ctrl+Shift+H 优先于 Ctrl+H
+            if i.key_pressed(egui::Key::H) && ctrl && shift {
+                return Some(Action::ToggleShowHidden);
+            }
+            if i.key_pressed(egui::Key::H) && ctrl {
+                return Some(Action::ToggleHideNote);
+            }
+
+            // 纯按键：需要检查是否在打字
+            if !typing {
+                if i.key_pressed(egui::Key::ArrowDown) || (i.key_pressed(egui::Key::J) && ctrl) {
+                    return Some(Action::SelectNext);
+                }
+                if i.key_pressed(egui::Key::ArrowUp) || (i.key_pressed(egui::Key::K) && ctrl) {
+                    return Some(Action::SelectPrev);
+                }
+            }
+
+            None
+        })
+    }
+
+    /// 执行 Action（按钮和快捷键的统一入口）
+    fn handle_action(&mut self, action: Action) {
+        // 大多数操作前先保存当前编辑内容到 board
+        let needs_save = !matches!(action, Action::AddNote | Action::EditNote);
+        if needs_save {
+            self.save_selected();
+        }
+
+        match action {
+            Action::AddNote => {
+                let note = self.board.add_note("新标签".to_owned(), String::new());
+                self.selected_id = Some(note.id);
+                self.edit_title = note.title.clone();
+                self.edit_content = note.content.clone();
+            }
+            Action::DeleteNote => {
+                if let Some(id) = self.selected_id {
+                    if self.board.delete_note(id).is_ok() {
+                        self.selected_id = None;
+                    }
+                }
+            }
+            Action::ToggleHideNote => {
+                if let Some(id) = self.selected_id {
+                    self.board.toggle_hide_note(id);
+                }
+            }
+            Action::ToggleShowHidden => {
+                self.show_hidden = !self.show_hidden;
+            }
+            Action::SelectNext => {
+                self.selected_id = self
+                    .board
+                    .next_visible_note(self.selected_id, self.show_hidden);
+                self.load_selected();
+            }
+            Action::SelectPrev => {
+                self.selected_id = self
+                    .board
+                    .prev_visible_note(self.selected_id, self.show_hidden);
+                self.load_selected();
+            }
+            Action::EditNote => {
+                // 暂不使用：当前模式是"选中即编辑"
+            }
+        }
+    }
+
+    /// 把编辑框内容写回 board
+    fn save_selected(&mut self) {
+        if let Some(id) = self.selected_id {
+            self.board
+                .edit_note(id, self.edit_title.clone(), self.edit_content.clone())
+                .ok();
+        }
+    }
+
+    /// 把选中便签的标题和内容加载到编辑框
+    fn load_selected(&mut self) {
+        if let Some(id) = self.selected_id {
+            if let Some(note) = self.board.notes().iter().find(|n| n.id == id) {
+                self.edit_title = note.title.clone();
+                self.edit_content = note.content.clone();
+            }
+        }
+    }
 }
 
 impl eframe::App for SimpleNoteApp {
@@ -95,6 +200,12 @@ impl eframe::App for SimpleNoteApp {
             }
         }
 
+        // ===== 快捷键处理 =====
+        let action = self.detect_action(ui);
+        if let Some(action) = action {
+            self.handle_action(action);
+        }
+
         // ===== 顶部菜单栏 =====
         egui::Panel::top("top_panel").show_inside(ui, |ui| {
             egui::MenuBar::new().ui(ui, |ui| {
@@ -122,56 +233,26 @@ impl eframe::App for SimpleNoteApp {
         egui::Panel::top("toolbar").show_inside(ui, |ui| {
             ui.horizontal(|ui| {
                 if ui.button("➕ 新建").clicked() {
-                    let new_note = self
-                        .board
-                        .add_note("新标签".to_owned(), "新标签内容".to_owned());
-                    self.selected_id = Some(new_note.id);
-                    self.edit_title = new_note.title.clone();
-                    self.edit_content = new_note.content.clone();
+                    self.handle_action(Action::AddNote);
                 }
 
-                if ui.button("❌ 删除").clicked()
-                    && let Some(id) = self.selected_id
-                {
-                    if let Err(err) = self.board.delete_note(id) {
-                        log::error!("删除便签失败: {err}");
-                    } else {
-                        self.selected_id = None;
-                    }
+                if ui.button("❌ 删除").clicked() {
+                    self.handle_action(Action::DeleteNote);
                 }
 
-                if ui.button("➖ 隐藏").clicked()
-                    && let Some(id) = self.selected_id
-                {
-                    self.board
-                        .edit_note(id, self.edit_title.clone(), self.edit_content.clone())
-                        .ok();
-
-                    if let Err(err) = self.board.hide_note(id) {
-                        log::error!("隐藏便签失败: {err}");
-                    } else {
-                        self.show_hidden = false;
-                        self.selected_id = None;
-                    }
+                if ui.button("➖ 隐藏").clicked() {
+                    self.handle_action(Action::ToggleHideNote);
                 }
 
-                if ui.button("🔓 取消隐藏").clicked()
-                    && let Some(id) = self.selected_id
-                {
-                    self.board
-                        .edit_note(id, self.edit_title.clone(), self.edit_content.clone())
-                        .ok();
-
-                    if let Err(err) = self.board.unhide_note(id) {
-                        log::error!("取消隐藏便签失败: {err}");
-                    } else {
-                        self.selected_id = None;
-                    }
+                if ui.button("🔓 取消隐藏").clicked() {
+                    self.handle_action(Action::ToggleHideNote);
                 }
 
                 ui.separator();
 
-                ui.checkbox(&mut self.show_hidden, "👁 显示已隐藏");
+                if ui.checkbox(&mut self.show_hidden, "👁 显示已隐藏").changed() {
+                    // show_hidden 已被 checkbox 修改，Action 不再翻转
+                }
             });
         });
 

@@ -83,6 +83,47 @@ impl Board {
         }
     }
 
+    /// Toggle a note's hidden state.
+    pub fn toggle_hide_note(&mut self, id: u64) {
+        if let Some(note) = self.notes.iter_mut().find(|n| n.id == id) {
+            note.hidden = !note.hidden;
+        }
+    }
+
+    /// 找到下一个可见便签的 ID（循环查找，无内存分配）
+    pub fn next_visible_note(&self, current_id: Option<u64>, show_hidden: bool) -> Option<u64> {
+        if self.notes.is_empty() {
+            return None;
+        }
+        let visible = |n: &&Note| show_hidden || !n.hidden;
+        let pos = current_id.and_then(|id| self.notes.iter().position(|n| n.id == id));
+
+        // 从当前位置之后找
+        let start = pos.map_or(0, |p| p + 1);
+        if let Some(note) = self.notes[start..].iter().find(visible) {
+            return Some(note.id);
+        }
+        // 没找到就从头绕回
+        self.notes[..start].iter().find(visible).map(|n| n.id)
+    }
+
+    /// 找到上一个可见便签的 ID（循环查找，无内存分配）
+    pub fn prev_visible_note(&self, current_id: Option<u64>, show_hidden: bool) -> Option<u64> {
+        if self.notes.is_empty() {
+            return None;
+        }
+        let visible = |n: &&Note| show_hidden || !n.hidden;
+        let pos = current_id.and_then(|id| self.notes.iter().position(|n| n.id == id));
+
+        // 从当前位置之前逆向找
+        let end = pos.unwrap_or(self.notes.len());
+        if let Some(note) = self.notes[..end].iter().rev().find(visible) {
+            return Some(note.id);
+        }
+        // 没找到就从尾绕回
+        self.notes[end..].iter().rev().find(visible).map(|n| n.id)
+    }
+
     pub fn notes(&self) -> &[Note] {
         &self.notes
     }
