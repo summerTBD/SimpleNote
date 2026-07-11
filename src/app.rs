@@ -104,7 +104,7 @@ impl SimpleNoteApp {
     /// 执行 Action（按钮和快捷键的统一入口）
     fn handle_action(&mut self, action: &Action) {
         // 大多数操作前先保存当前编辑内容到 board
-        let needs_save = !matches!(action, Action::AddNote | Action::EditNote);
+        let needs_save = !matches!(action, Action::EditNote);
         if needs_save {
             self.save_selected();
         }

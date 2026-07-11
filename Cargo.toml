@@ -63,6 +63,8 @@ opt-level = 2
 [lints]
 workspace = true
 
+[workspace]
+
 [workspace.lints.rust]
 unsafe_code = "deny"
 
