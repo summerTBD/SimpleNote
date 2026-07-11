@@ -58,9 +58,14 @@ impl SimpleNoteApp {
         cc.egui_ctx.set_fonts(fonts);
 
         if let Some(storage) = cc.storage {
-            eframe::get_value(storage, eframe::APP_KEY).unwrap_or_default()
+            let mut app: Self = eframe::get_value(storage, eframe::APP_KEY).unwrap_or_default();
+            app.first_frame = true;
+            app
         } else {
-            Default::default()
+            Self {
+                first_frame: true,
+                ..Default::default()
+            }
         }
     }
 
