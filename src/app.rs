@@ -84,6 +84,10 @@ impl SimpleNoteApp {
             if i.key_pressed(egui::Key::D) && ctrl {
                 return Some(Action::DeleteNote);
             }
+            if i.key_pressed(egui::Key::S) && ctrl {
+                return Some(Action::SaveNote);
+            }
+
             // 范围小的先判断：Ctrl+Shift+H 优先于 Ctrl+H
             if i.key_pressed(egui::Key::H) && ctrl && shift {
                 return Some(Action::ToggleShowHidden);
@@ -109,7 +113,7 @@ impl SimpleNoteApp {
     /// 执行 Action（按钮和快捷键的统一入口）
     fn handle_action(&mut self, action: &Action) {
         // 大多数操作前先保存当前编辑内容到 board
-        let needs_save = !matches!(action, Action::EditNote);
+        let needs_save = !matches!(action, Action::EditNote | Action::SaveNote);
         if needs_save {
             self.save_selected();
         }
@@ -128,6 +132,11 @@ impl SimpleNoteApp {
                     self.selected_id = None;
                 }
             }
+
+            Action::SaveNote => {
+                self.save_selected();
+            }
+
             Action::ToggleHideNote => {
                 if let Some(id) = self.selected_id {
                     self.board.toggle_hide_note(id);
@@ -217,6 +226,12 @@ impl eframe::App for SimpleNoteApp {
                 let is_web = cfg!(target_arch = "wasm32");
                 if !is_web {
                     ui.menu_button("文件", |ui| {
+                        if ui.button("保存").clicked() {
+                            self.handle_action(&Action::SaveNote);
+                            ui.close();
+                        }
+
+                        ui.separator();
                         if ui.button("恢复默认窗口").clicked() {
                             ui.ctx().send_viewport_cmd(egui::ViewportCommand::InnerSize(
                                 egui::Vec2::new(700.0, 500.0),
